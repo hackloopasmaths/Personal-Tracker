@@ -1,0 +1,64 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: #0a0a0a;
+  color: #e5e5e5;
+  font-family: 'Space Mono', ui-monospace, monospace;
+}
+
+@keyframes axis-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.axis-stagger > * {
+  animation: axis-fade-up 0.5s ease-out both;
+}
+
+.axis-stagger > *:nth-child(1) {
+  animation-delay: 0ms;
+}
+.axis-stagger > *:nth-child(2) {
+  animation-delay: 60ms;
+}
+.axis-stagger > *:nth-child(3) {
+  animation-delay: 120ms;
+}
+.axis-stagger > *:nth-child(4) {
+  animation-delay: 180ms;
+}
+.axis-stagger > *:nth-child(5) {
+  animation-delay: 240ms;
+}
+.axis-stagger > *:nth-child(6) {
+  animation-delay: 300ms;
+}
+.axis-stagger > *:nth-child(7) {
+  animation-delay: 360ms;
+}
+.axis-stagger > *:nth-child(8) {
+  animation-delay: 420ms;
+}
+
+.sheet-enter {
+  transform: translateY(100%);
+}
+.sheet-enter-active {
+  transform: translateY(0);
+  transition: transform 0.28s ease-out;
+}
