@@ -214,14 +214,14 @@ export default function Dashboard() {
                 startAngle={90}
                 endAngle={-270}
               >
-                <PolarAngleAxis type="number" domain={[0, 5]} angleAxisId={0} tick={false} />
+                <PolarAngleAxis type="number" domain={[0, 6]} angleAxisId={0} tick={false} />
                 <RadialBar background={{ fill: '#1a1a1a' }} dataKey="value" cornerRadius={10} />
               </RadialBarChart>
             </ResponsiveContainer>
             <div className="-mt-36 flex items-center justify-center pb-10">
               <div className="font-mono text-4xl font-bold text-white">
                 {modulesCount}
-                <span className="text-axis-muted">/5</span>
+                <span className="text-axis-muted">/6</span>
               </div>
             </div>
           </div>
@@ -232,9 +232,10 @@ export default function Dashboard() {
           <div className="mt-4 space-y-3">
             {[
               { key: 'sleep', label: 'Sleep' },
-              { key: 'gym', label: 'Gym' },
+              { key: 'gym', label: 'Fitness' },
               { key: 'mood', label: 'Mood' },
               { key: 'spend', label: 'Spend' },
+              { key: 'nofap', label: 'NoFap' },
               { key: 'habits', label: 'Habits' },
             ].map((row) => (
               <div key={row.key} className="grid grid-cols-[92px_1fr] items-center gap-3">
@@ -257,6 +258,11 @@ export default function Dashboard() {
                       if (!log) bg = '#333333';
                       else if (log.gym_done === true) bg = '#C8F55A';
                       else if (log.gym_done === false) bg = '#333333';
+                    }
+                    if (row.key === 'nofap') {
+                      if (!log || !log.habits || log.habits._nofap == null) bg = '#333333';
+                      else if (log.habits._nofap === true) bg = '#C8F55A';
+                      else if (log.habits._nofap === false) bg = '#FF4444';
                     }
                     if (row.key === 'mood') {
                       if (!log || log.mood == null) bg = '#333333';
