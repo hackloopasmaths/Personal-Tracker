@@ -50,6 +50,20 @@ export default function Profile() {
   const [picked, setPicked] = useState([]);
   const [busy, setBusy] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [newHabit, setNewHabit] = useState('');
+
+  function handleAddCustomHabit(e) {
+    e.preventDefault();
+    const val = newHabit.trim();
+    if (!val) return;
+    if (picked.includes(val)) {
+      setNewHabit('');
+      return;
+    }
+    if (picked.length >= 7) return;
+    setPicked((prev) => [...prev, val]);
+    setNewHabit('');
+  }
 
   async function load() {
     const [{ data: p, error: pe }, { data: l, error: le }] = await Promise.all([getUserProfile(), getAllLogs()]);
@@ -223,7 +237,7 @@ export default function Profile() {
           <div>
             <div className="font-mono text-[11px] text-axis-muted">Habits (3–7)</div>
             <div className="mt-2 flex flex-wrap gap-2">
-              {HABIT_OPTIONS.map((h) => {
+              {Array.from(new Set([...HABIT_OPTIONS, ...picked])).map((h) => {
                 const active = picked.includes(h);
                 const disabled = !active && picked.length >= 7;
                 return (
@@ -241,6 +255,28 @@ export default function Profile() {
                 );
               })}
             </div>
+            {picked.length < 7 && (
+              <div className="mt-3 flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Custom habit..."
+                  value={newHabit}
+                  onChange={(e) => setNewHabit(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleAddCustomHabit(e);
+                  }}
+                  className="flex-1 rounded-xl border border-axis-border bg-axis-bg px-3 py-2 font-mono text-sm text-white outline-none focus:border-axis-accent"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddCustomHabit}
+                  disabled={!newHabit.trim()}
+                  className="rounded-xl border border-axis-border bg-axis-card px-4 py-2 font-mono text-xs font-bold text-white disabled:opacity-40"
+                >
+                  Add
+                </button>
+              </div>
+            )}
           </div>
           <button
             type="button"
