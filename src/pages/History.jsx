@@ -15,7 +15,7 @@ const METRICS = [
   { id: 'sleep', label: 'Sleep hours' },
   { id: 'mood', label: 'Mood score' },
   { id: 'spend', label: 'Daily spend' },
-  { id: 'gym', label: 'Gym (0/1)' },
+  { id: 'gym', label: 'Fitness (0/1)' },
 ];
 
 function xpHeatColor(xp, maxXp) {
