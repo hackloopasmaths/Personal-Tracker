@@ -26,7 +26,7 @@ const SPEND_CATS = ['Food', 'Transport', 'Social', 'Subs', 'Other'];
 
 function normalizeHabitsMapLocal(h) {
   if (!h || typeof h !== 'object' || Array.isArray(h)) return {};
-  const { _nofap, ...rest } = h;
+  const { _nofap, _expenses, ...rest } = h;
   return rest;
 }
 
@@ -83,8 +83,24 @@ export default function TodayPanel({ profile, onProfileUpdated, onLevelUp, onStr
   const [nofapDone, setNofapDone] = useState(null);
   const [mood, setMood] = useState(null);
   const [moodNote, setMoodNote] = useState('');
-  const [spend, setSpend] = useState('');
-  const [spendCat, setSpendCat] = useState('Food');
+  const [expenses, setExpenses] = useState([{ id: Date.now(), amount: '', category: 'Food', details: '' }]);
+
+  function addExpense() {
+    setExpenses([...expenses, { id: Date.now() + Math.random(), amount: '', category: 'Food', details: '' }]);
+  }
+
+  function updateExpense(id, field, value) {
+    setExpenses(expenses.map(e => e.id === id ? { ...e, [field]: value } : e));
+  }
+
+  function removeExpense(id) {
+    const updated = expenses.filter(e => e.id !== id);
+    if (updated.length === 0) {
+      setExpenses([{ id: Date.now(), amount: '', category: 'Food', details: '' }]);
+    } else {
+      setExpenses(updated);
+    }
+  }
   const [habitsMap, setHabitsMap] = useState({});
 
   const [recentLogs, setRecentLogs] = useState([]);
@@ -131,8 +147,14 @@ export default function TodayPanel({ profile, onProfileUpdated, onLevelUp, onStr
         setGymDuration(Number(log.gym_duration ?? 45));
         setMood(log.mood != null ? Number(log.mood) : null);
         setMoodNote(log.mood_note || '');
-        setSpend(log.spend != null ? String(log.spend) : '');
-        setSpendCat(log.spend_category || 'Food');
+        const savedExp = log.habits?._expenses;
+        if (Array.isArray(savedExp) && savedExp.length > 0) {
+          setExpenses(savedExp);
+        } else if (log.spend != null) {
+          setExpenses([{ id: Date.now(), amount: String(log.spend), category: log.spend_category || 'Food', details: '' }]);
+        } else {
+          setExpenses([{ id: Date.now(), amount: '', category: 'Food', details: '' }]);
+        }
         setHabitsMap(normalizeHabitsMapLocal(log.habits));
         setNofapDone(log.habits?._nofap ?? null);
       } else {
@@ -144,8 +166,7 @@ export default function TodayPanel({ profile, onProfileUpdated, onLevelUp, onStr
         setGymDuration(45);
         setMood(null);
         setMoodNote('');
-        setSpend('');
-        setSpendCat('Food');
+        setExpenses([{ id: Date.now(), amount: '', category: 'Food', details: '' }]);
         const blank = {};
         habitList.forEach((h) => {
           blank[h] = false;
@@ -166,7 +187,9 @@ export default function TodayPanel({ profile, onProfileUpdated, onLevelUp, onStr
   const sleepDone = sleepHours != null;
   const gymDone = gymTrain === true || gymTrain === false;
   const moodDone = mood != null;
-  const spendDone = spend !== '' && spend != null;
+  const validExpenses = expenses.filter(e => e.amount !== '');
+  const spendDone = validExpenses.length > 0;
+  const totalSpend = validExpenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
   const habitsDone = habitList.length === 0 ? true : habitList.every((h) => habitsMap[h] === true);
 
   const habitsSummaryCount = useMemo(() => {
@@ -188,9 +211,9 @@ export default function TodayPanel({ profile, onProfileUpdated, onLevelUp, onStr
       gym_duration: gymTrain === true ? Number(gymDuration) || 0 : null,
       mood,
       mood_note: moodNote.slice(0, 100),
-      spend: spend === '' ? null : Number(spend),
-      spend_category: spendDone ? spendCat : null,
-      habits: { ...habitsMap, _nofap: nofapDone },
+      spend: spendDone ? totalSpend : null,
+      spend_category: spendDone ? (validExpenses.length > 1 ? 'Multiple' : validExpenses[0].category) : null,
+      habits: { ...habitsMap, _nofap: nofapDone, _expenses: validExpenses },
     };
 
     const xpLog = {
@@ -488,34 +511,67 @@ export default function TodayPanel({ profile, onProfileUpdated, onLevelUp, onStr
             done={spendDone}
             open={expanded === 'money'}
             onToggle={() => setExpanded((e) => (e === 'money' ? null : 'money'))}
-            summary={spendDone ? `₹${spend} · ${spendCat}` : null}
+            summary={spendDone ? `₹${totalSpend} · ${validExpenses.length > 1 ? validExpenses.length + ' items' : validExpenses[0].category}` : null}
           >
-            <label className="block">
-              <span className="font-mono text-[11px] uppercase text-axis-muted">Amount</span>
-              <div className="mt-2 flex items-center gap-2 rounded-xl border border-axis-border bg-axis-bg px-3">
-                <span className="font-mono text-lg text-axis-muted">₹</span>
-                <input
-                  className="w-full bg-transparent py-3 font-mono text-2xl text-white outline-none"
-                  inputMode="decimal"
-                  value={spend}
-                  onChange={(e) => setSpend(e.target.value)}
-                />
-              </div>
-            </label>
-            <div className="mt-4 font-mono text-[11px] uppercase text-axis-muted">Category</div>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {SPEND_CATS.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => setSpendCat(c)}
-                  className={`rounded-full px-3 py-2 font-mono text-[11px] ${
-                    spendCat === c ? 'bg-axis-accent text-axis-bg' : 'border border-axis-border text-axis-muted'
-                  }`}
-                >
-                  {c}
-                </button>
+            <div className="space-y-6">
+              {expenses.map((exp) => (
+                <div key={exp.id} className="relative rounded-xl border border-axis-border bg-[#1A1A1A] p-4">
+                  {expenses.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeExpense(exp.id)}
+                      className="absolute right-3 top-3 text-axis-muted hover:text-axis-danger"
+                    >
+                      ✕
+                    </button>
+                  )}
+                  <label className="block pr-6">
+                    <span className="font-mono text-[11px] uppercase text-axis-muted">Amount</span>
+                    <div className="mt-2 flex items-center gap-2 rounded-xl border border-axis-border bg-axis-bg px-3">
+                      <span className="font-mono text-lg text-axis-muted">₹</span>
+                      <input
+                        className="w-full bg-transparent py-3 font-mono text-xl text-white outline-none"
+                        inputMode="decimal"
+                        value={exp.amount}
+                        onChange={(e) => updateExpense(exp.id, 'amount', e.target.value)}
+                      />
+                    </div>
+                  </label>
+                  <div className="mt-4 font-mono text-[11px] uppercase text-axis-muted">Category</div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {SPEND_CATS.map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => updateExpense(exp.id, 'category', c)}
+                        className={`rounded-full px-3 py-2 font-mono text-[11px] ${
+                          exp.category === c ? 'bg-axis-accent text-axis-bg' : 'border border-axis-border text-axis-muted'
+                        }`}
+                      >
+                        {c}
+                      </button>
+                    ))}
+                  </div>
+                  {exp.category === 'Other' && (
+                    <label className="mt-4 block">
+                      <span className="font-mono text-[11px] uppercase text-axis-muted">Details</span>
+                      <input
+                        className="mt-2 w-full rounded-xl border border-axis-border bg-axis-bg px-3 py-2 font-mono text-sm text-white outline-none focus:border-axis-accent"
+                        value={exp.details || ''}
+                        onChange={(e) => updateExpense(exp.id, 'details', e.target.value)}
+                        placeholder="What did you spend on?"
+                      />
+                    </label>
+                  )}
+                </div>
               ))}
+              <button
+                type="button"
+                onClick={addExpense}
+                className="w-full rounded-xl border border-axis-border border-dashed py-3 font-mono text-sm text-axis-muted hover:text-white"
+              >
+                + Add Expense
+              </button>
             </div>
           </CardShell>
 
