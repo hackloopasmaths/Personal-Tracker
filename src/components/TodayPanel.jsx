@@ -21,12 +21,13 @@ const MOODS = [
   { v: 5, emoji: '😄' },
 ];
 
-const GYM_TYPES = ['Push', 'Pull', 'Legs', 'Cardio'];
+const FITNESS_TYPES = ['Stretch', 'Badminton', 'Walk/Run', 'Others'];
 const SPEND_CATS = ['Food', 'Transport', 'Social', 'Subs', 'Other'];
 
 function normalizeHabitsMapLocal(h) {
   if (!h || typeof h !== 'object' || Array.isArray(h)) return {};
-  return h;
+  const { _nofap, ...rest } = h;
+  return rest;
 }
 
 function habitStreakCount({ habitName, todayStr, draftMap, logsByDate }) {
@@ -76,8 +77,10 @@ export default function TodayPanel({ profile, onProfileUpdated, onLevelUp, onStr
   const [sleepHours, setSleepHours] = useState(7);
   const [sleepQuality, setSleepQuality] = useState(3);
   const [gymTrain, setGymTrain] = useState(null);
-  const [gymType, setGymType] = useState('Push');
+  const [gymType, setGymType] = useState('Stretch');
+  const [customFitness, setCustomFitness] = useState('');
   const [gymDuration, setGymDuration] = useState(45);
+  const [nofapDone, setNofapDone] = useState(null);
   const [mood, setMood] = useState(null);
   const [moodNote, setMoodNote] = useState('');
   const [spend, setSpend] = useState('');
@@ -115,18 +118,29 @@ export default function TodayPanel({ profile, onProfileUpdated, onLevelUp, onStr
         if (log.gym_done === true) setGymTrain(true);
         else if (log.gym_done === false) setGymTrain(false);
         else setGymTrain(null);
-        setGymType(log.gym_type || 'Push');
+
+        const gType = log.gym_type || 'Stretch';
+        if (['Stretch', 'Badminton', 'Walk/Run'].includes(gType)) {
+          setGymType(gType);
+          setCustomFitness('');
+        } else {
+          setGymType('Others');
+          setCustomFitness(gType);
+        }
+
         setGymDuration(Number(log.gym_duration ?? 45));
         setMood(log.mood != null ? Number(log.mood) : null);
         setMoodNote(log.mood_note || '');
         setSpend(log.spend != null ? String(log.spend) : '');
         setSpendCat(log.spend_category || 'Food');
         setHabitsMap(normalizeHabitsMapLocal(log.habits));
+        setNofapDone(log.habits?._nofap ?? null);
       } else {
         setSleepHours(7);
         setSleepQuality(3);
         setGymTrain(null);
-        setGymType('Push');
+        setGymType('Stretch');
+        setCustomFitness('');
         setGymDuration(45);
         setMood(null);
         setMoodNote('');
@@ -137,6 +151,7 @@ export default function TodayPanel({ profile, onProfileUpdated, onLevelUp, onStr
           blank[h] = false;
         });
         setHabitsMap(blank);
+        setNofapDone(null);
       }
       setExpanded('sleep');
       setFormError('');
@@ -169,13 +184,13 @@ export default function TodayPanel({ profile, onProfileUpdated, onLevelUp, onStr
       sleep_hours: sleepHours,
       sleep_quality: sleepQuality,
       gym_done,
-      gym_type: gymTrain === true ? gymType : null,
+      gym_type: gymTrain === true ? (gymType === 'Others' ? (customFitness.trim() || 'Others') : gymType) : null,
       gym_duration: gymTrain === true ? Number(gymDuration) || 0 : null,
       mood,
       mood_note: moodNote.slice(0, 100),
       spend: spend === '' ? null : Number(spend),
       spend_category: spendDone ? spendCat : null,
-      habits: habitsMap,
+      habits: { ...habitsMap, _nofap: nofapDone },
     };
 
     const xpLog = {
@@ -359,15 +374,15 @@ export default function TodayPanel({ profile, onProfileUpdated, onLevelUp, onStr
           </CardShell>
 
           <CardShell
-            title="Gym"
+            title="Fitness"
             done={gymDone}
             open={expanded === 'gym'}
             onToggle={() => setExpanded((e) => (e === 'gym' ? null : 'gym'))}
             summary={
-              gymTrain === true ? `${gymType} · ${gymDuration}m` : gymTrain === false ? 'Rest day' : null
+              gymTrain === true ? `${gymType === 'Others' ? (customFitness || 'Others') : gymType} · ${gymDuration}m` : gymTrain === false ? 'Rest day' : null
             }
           >
-            <div className="font-mono text-[11px] uppercase text-axis-muted">Did you train today?</div>
+            <div className="font-mono text-[11px] uppercase text-axis-muted">Did you workout today?</div>
             <div className="mt-3 flex gap-2">
               <button
                 type="button"
@@ -394,7 +409,7 @@ export default function TodayPanel({ profile, onProfileUpdated, onLevelUp, onStr
                 <div>
                   <div className="font-mono text-[11px] uppercase text-axis-muted">Type</div>
                   <div className="mt-2 flex flex-wrap gap-2">
-                    {GYM_TYPES.map((t) => (
+                    {FITNESS_TYPES.map((t) => (
                       <button
                         key={t}
                         type="button"
@@ -408,6 +423,19 @@ export default function TodayPanel({ profile, onProfileUpdated, onLevelUp, onStr
                     ))}
                   </div>
                 </div>
+
+                {gymType === 'Others' && (
+                  <label className="block">
+                    <span className="font-mono text-[11px] uppercase text-axis-muted">Activity Name</span>
+                    <input
+                      className="mt-2 w-full rounded-xl border border-axis-border bg-axis-bg px-3 py-3 font-mono text-sm text-white outline-none focus:border-axis-accent"
+                      value={customFitness}
+                      onChange={(e) => setCustomFitness(e.target.value)}
+                      placeholder="e.g. Swimming"
+                    />
+                  </label>
+                )}
+
                 <label className="block">
                   <span className="font-mono text-[11px] uppercase text-axis-muted">Duration (minutes)</span>
                   <input
@@ -488,6 +516,36 @@ export default function TodayPanel({ profile, onProfileUpdated, onLevelUp, onStr
                   {c}
                 </button>
               ))}
+            </div>
+          </CardShell>
+
+          <CardShell
+            title="NoFap"
+            done={nofapDone != null}
+            open={expanded === 'nofap'}
+            onToggle={() => setExpanded((e) => (e === 'nofap' ? null : 'nofap'))}
+            summary={nofapDone === true ? 'Maintained Streak' : nofapDone === false ? 'Relapsed' : null}
+          >
+            <div className="font-mono text-[11px] uppercase text-axis-muted">Did you maintain your NoFap streak?</div>
+            <div className="mt-3 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setNofapDone(true)}
+                className={`flex-1 rounded-full py-2 font-mono text-xs ${
+                  nofapDone === true ? 'bg-axis-accent text-axis-bg' : 'border border-axis-border text-axis-muted'
+                }`}
+              >
+                Yes
+              </button>
+              <button
+                type="button"
+                onClick={() => setNofapDone(false)}
+                className={`flex-1 rounded-full py-2 font-mono text-xs ${
+                  nofapDone === false ? 'bg-axis-danger text-white border-axis-danger' : 'border border-axis-border text-axis-muted'
+                }`}
+              >
+                Relapsed
+              </button>
             </div>
           </CardShell>
 
