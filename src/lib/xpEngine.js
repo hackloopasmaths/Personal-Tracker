@@ -43,6 +43,7 @@ export function isFullDayLogged(log, habitList) {
   const gymOk = log.gym_done === true || log.gym_done === false;
   const moodOk = log.mood != null && log.mood !== '';
   const spendOk = log.spend != null && log.spend !== '';
+  const nofapOk = log.habits && log.habits._nofap != null;
 
   let habitsOk = false;
   if (list.length === 0) {
@@ -51,7 +52,7 @@ export function isFullDayLogged(log, habitList) {
     habitsOk = list.every((name) => habitsMap[name] === true);
   }
 
-  return sleepOk && gymOk && moodOk && spendOk && habitsOk;
+  return sleepOk && gymOk && moodOk && spendOk && nofapOk && habitsOk;
 }
 
 export function countModulesLogged(log, habitList) {
@@ -64,6 +65,7 @@ export function countModulesLogged(log, habitList) {
   if (log.gym_done === true || log.gym_done === false) n += 1;
   if (log.mood != null && log.mood !== '') n += 1;
   if (log.spend != null && log.spend !== '') n += 1;
+  if (log.habits && log.habits._nofap != null) n += 1;
 
   if (list.length === 0) {
     if (log.habits != null && typeof log.habits === 'object') n += 1;
@@ -93,7 +95,7 @@ export function calculateDayXP(log, budget, habitList) {
   }
 
   if (log?.gym_done === true) {
-    breakdown.push({ id: 'gym', label: 'Gym logged', xp: 20 });
+    breakdown.push({ id: 'gym', label: 'Fitness logged', xp: 20 });
     total += 20;
     const dur = Number(log.gym_duration) || 0;
     if (dur > 45) {
@@ -117,6 +119,11 @@ export function calculateDayXP(log, budget, habitList) {
     }
   }
 
+  if (log?.habits?._nofap === true) {
+    breakdown.push({ id: 'nofap', label: 'NoFap maintained', xp: 15 });
+    total += 15;
+  }
+
   for (const h of list) {
     if (habitsMap[h]) {
       breakdown.push({ id: `habit:${h}`, label: h, xp: 8 });
@@ -132,7 +139,7 @@ export function calculateDayXP(log, budget, habitList) {
     }
   }
 
-  if (countModulesLogged(log, list) === 5) {
+  if (countModulesLogged(log, list) === 6) {
     breakdown.push({ id: 'modules_all', label: 'Full day bonus', xp: 50 });
     total += 50;
   }
